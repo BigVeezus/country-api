@@ -22,7 +22,7 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
   // Add logger to server to handle logging
-  app.useLogger(app.get(Logger));
+  // app.useLogger(app.get(Logger));
 
   // Enable cors to connect from required servers
   app.enableCors();
