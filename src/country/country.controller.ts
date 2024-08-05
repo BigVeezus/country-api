@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { CountryService } from './county.service';
-import { GetCountriesDTO, RegionDTO } from './country.dto';
+import { GetCountriesDTO, LanguageDTO, RegionDTO } from './country.dto';
 
 @Controller('api')
 export class CountryController {
@@ -19,5 +19,15 @@ export class CountryController {
   @Get('regions')
   async getRegions(@Query() query: RegionDTO) {
     return this.countryService.getCountryByRegion(query);
+  }
+
+  @Get('language')
+  async getCountriesByLanguages(@Query() query: LanguageDTO) {
+    return this.countryService.getCountryByLanguages(query);
+  }
+
+  @Get('statistics')
+  async getCountriesStatistics() {
+    return this.countryService.getCountryStatistics();
   }
 }

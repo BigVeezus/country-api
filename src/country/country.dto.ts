@@ -39,3 +39,17 @@ export class RegionDTO {
   @IsOptional()
   page: number;
 }
+
+export class LanguageDTO {
+  @IsNotEmpty()
+  @IsString()
+  language: string;
+
+  @IsNumberString()
+  @IsOptional()
+  limit: number;
+
+  @IsNumberString()
+  @IsOptional()
+  page: number;
+}

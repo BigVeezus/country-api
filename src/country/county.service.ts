@@ -5,8 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import axios from 'axios';
-import { Response } from 'express';
-import { GetCountriesDTO, RegionDTO } from './country.dto';
+import { GetCountriesDTO, LanguageDTO, RegionDTO } from './country.dto';
 import { OperatorEnum } from './country.interface';
 
 @Injectable()
@@ -104,7 +103,7 @@ export class CountryService {
       },
     })
       .then((response: any) => {
-        this.logger.log('Got country by Region');
+        this.logger.log('Got country by region');
         return response.data;
       })
       .catch((error: any) => {
@@ -120,9 +119,82 @@ export class CountryService {
       success: true,
       data: this.paginateHelper(data, page, limit),
       region,
-      totalPopulation: 20000,
+      totalPopulation: this.fieldCalculatorHelper(data, 'population'),
       currentPage: page,
       limit: limit,
+    };
+  }
+
+  async getCountryByLanguages(query: LanguageDTO) {
+    let { limit, page, language } = query;
+    let data = await axios({
+      url: `https://restcountries.com/v3.1/lang/${language}`,
+      method: 'GET',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    })
+      .then((response: any) => {
+        this.logger.log('Get countries by languages');
+        return response.data;
+      })
+      .catch((error: any) => {
+        console.log(error);
+        this.logger.error(error);
+        throw new BadRequestException(error.response.data);
+      });
+
+    const countriesNum = data.length;
+
+    page = page && !isNaN(page) && Number(page) > 0 ? Number(page) : 1;
+    limit = limit && !isNaN(limit) ? Number(limit) : 5;
+
+    return {
+      success: true,
+      data: this.paginateHelper(data, page, limit),
+      language: language,
+      speakingCountries: countriesNum,
+      currentPage: page,
+      limit: limit,
+    };
+  }
+
+  async getCountryStatistics() {
+    let data = await axios({
+      url: `https://restcountries.com/v3.1/all`,
+      method: 'GET',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    })
+      .then((response: any) => {
+        this.logger.log('Got countries statistics');
+        return response.data;
+      })
+      .catch((error: any) => {
+        console.log(error);
+        this.logger.error(error);
+        throw new BadRequestException(error.response.data);
+      });
+
+    const total = data.length;
+
+    const smallest = this.getMinValue(data, 'population');
+    const largest = this.getMaxValue(data, 'population');
+
+    const langArr = data.map((el) => el.languages);
+
+    return {
+      totalCountries: total,
+      mostSpokenLanguage: this.getFrequentElement(langArr),
+      smallestPopulation: {
+        name: smallest.name?.common,
+        population: smallest.population,
+      },
+      largestPopulation: {
+        name: largest.name?.common,
+        population: largest.population,
+      },
     };
   }
 
@@ -146,5 +218,60 @@ export class CountryService {
     }
   }
 
-  // fieldCalculatorHelper
+  getFieldHelper(array: any, fieldname: string) {
+    return array.map((data) => data[fieldname]);
+  }
+
+  fieldCalculatorHelper(array: any, fieldname: string) {
+    let sum = 0;
+    array.forEach((data) => {
+      sum += data[fieldname];
+    });
+
+    return sum;
+  }
+
+  getMaxValue(array: any, fieldname: string) {
+    return array.reduce(
+      (acc, curr) => (curr[fieldname] > acc[fieldname] ? curr : acc),
+      array[0] || undefined,
+    );
+  }
+
+  getMinValue(array: any, fieldname: string) {
+    return array.reduce(
+      (acc, curr) => (curr[fieldname] < acc[fieldname] ? curr : acc),
+      array[0] || undefined,
+    );
+  }
+
+  getFrequentElement(array: any) {
+    var a = [];
+    array.forEach(function (obj) {
+      if (obj) {
+        let valuesArr = Object.values(obj);
+        valuesArr.flatMap((el) => {
+          a.push(el);
+        });
+      }
+    });
+
+    a.sort((a, b) => a - b);
+    let count = 1,
+      max = 0,
+      el;
+
+    for (let i = 1; i < a.length; ++i) {
+      if (a[i] === a[i - 1]) {
+        count++;
+      } else {
+        count = 1;
+      }
+      if (count > max) {
+        max = count;
+        el = a[i];
+      }
+    }
+    return el;
+  }
 }
