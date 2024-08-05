@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger } from 'nestjs-pino';
+// import { Logger } from 'nestjs-pino';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 
