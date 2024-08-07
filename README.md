@@ -20,7 +20,7 @@ And if I had more time, I would have implemented a more robust caching system an
 
 1. Install the app with `npm install`
 2. Run the app with `npm run start:dev`
-3. Open the swagger documentation on your browser with `http://localhost:3500/api/docs#/`
+3. Open the swagger documentation on your browser with `http://localhost:3500/docs#/`
 
 ## How to Run
 
