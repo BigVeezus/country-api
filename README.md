@@ -15,3 +15,9 @@ I opted for Nestjs as a framework because of the following;
 I am generally proud of the organization of my code, the frequent commenting to explain some parts that may need clearance and the way I utilized helper functions (reusable functions).
 
 And if I had more time, I would have implemented a more robust caching system and testing feature
+
+## Swagger Doc
+
+1. Install the app with `npm install`
+2. Run the app with `npm run start:dev`
+3. Open the swagger documentation on your browser with `http://localhost:3500/api/docs#/`
