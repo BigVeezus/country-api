@@ -7,7 +7,6 @@ import {
 import axios from 'axios';
 import { GetCountriesDTO, LanguageDTO, RegionDTO } from './country.dto';
 import { OperatorEnum } from './country.interface';
-import { getOrSetCache } from 'src/common/cache/redis';
 
 @Injectable()
 export class CountryService {
@@ -16,42 +15,39 @@ export class CountryService {
   constructor() {}
 
   async getAllCountries(query: GetCountriesDTO) {
-    const data = await getOrSetCache(`/countries${query}`, async () => {
-      let { limit, page, region, population } = query;
-      let data = await axios({
-        url: region
-          ? `https://restcountries.com/v3.1/region/${region}`
-          : `https://restcountries.com/v3.1/all`,
-        method: 'GET',
-        headers: {
-          'Content-type': 'application/json',
-        },
+    let { limit, page, region, population } = query;
+    let data = await axios({
+      url: region
+        ? `https://restcountries.com/v3.1/region/${region}`
+        : `https://restcountries.com/v3.1/all`,
+      method: 'GET',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    })
+      .then((response: any) => {
+        this.logger.log('Got all countries');
+        return response.data;
       })
-        .then((response: any) => {
-          this.logger.log('Got all countries');
-          return response.data;
-        })
-        .catch((error: any) => {
-          console.log(error);
-          this.logger.error(error);
-          throw new BadRequestException(error.response.data);
-        });
+      .catch((error: any) => {
+        console.log(error);
+        this.logger.error(error);
+        throw new BadRequestException(error.response.data);
+      });
 
-      page = page && !isNaN(page) && Number(page) > 0 ? Number(page) : 1;
-      limit = limit && !isNaN(limit) ? Number(limit) : 5;
+    page = page && !isNaN(page) && Number(page) > 0 ? Number(page) : 1;
+    limit = limit && !isNaN(limit) ? Number(limit) : 5;
 
-      data = population
-        ? this.filterHelper(data, 'population', OperatorEnum.LESSER, population)
-        : data;
+    data = population
+      ? this.filterHelper(data, 'population', OperatorEnum.LESSER, population)
+      : data;
 
-      return {
-        success: true,
-        data: this.paginateHelper(data, page, limit),
-        currentPage: page,
-        limit: limit,
-      };
-    });
-    return data;
+    return {
+      success: true,
+      data: this.paginateHelper(data, page, limit),
+      currentPage: page,
+      limit: limit,
+    };
   }
 
   // service that gets country using the 3 abbreviation letters
