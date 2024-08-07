@@ -7,48 +7,54 @@ import {
 import axios from 'axios';
 import { GetCountriesDTO, LanguageDTO, RegionDTO } from './country.dto';
 import { OperatorEnum } from './country.interface';
+import { getOrSetCache } from 'src/common/cache/redis';
 
 @Injectable()
 export class CountryService {
+  //Initializing logger
   private logger = new Logger('Country-service');
   constructor() {}
 
   async getAllCountries(query: GetCountriesDTO) {
-    let { limit, page, region, population } = query;
-    let data = await axios({
-      url: region
-        ? `https://restcountries.com/v3.1/region/${region}`
-        : `https://restcountries.com/v3.1/all`,
-      method: 'GET',
-      headers: {
-        'Content-type': 'application/json',
-      },
-    })
-      .then((response: any) => {
-        this.logger.log('Got all countries');
-        return response.data;
+    const data = await getOrSetCache(`/countries${query}`, async () => {
+      let { limit, page, region, population } = query;
+      let data = await axios({
+        url: region
+          ? `https://restcountries.com/v3.1/region/${region}`
+          : `https://restcountries.com/v3.1/all`,
+        method: 'GET',
+        headers: {
+          'Content-type': 'application/json',
+        },
       })
-      .catch((error: any) => {
-        console.log(error);
-        this.logger.error(error);
-        throw new BadRequestException(error.response.data);
-      });
+        .then((response: any) => {
+          this.logger.log('Got all countries');
+          return response.data;
+        })
+        .catch((error: any) => {
+          console.log(error);
+          this.logger.error(error);
+          throw new BadRequestException(error.response.data);
+        });
 
-    page = page && !isNaN(page) && Number(page) > 0 ? Number(page) : 1;
-    limit = limit && !isNaN(limit) ? Number(limit) : 5;
+      page = page && !isNaN(page) && Number(page) > 0 ? Number(page) : 1;
+      limit = limit && !isNaN(limit) ? Number(limit) : 5;
 
-    data = population
-      ? this.filterHelper(data, 'population', OperatorEnum.LESSER, population)
-      : data;
+      data = population
+        ? this.filterHelper(data, 'population', OperatorEnum.LESSER, population)
+        : data;
 
-    return {
-      success: true,
-      data: this.paginateHelper(data, page, limit),
-      currentPage: page,
-      limit: limit,
-    };
+      return {
+        success: true,
+        data: this.paginateHelper(data, page, limit),
+        currentPage: page,
+        limit: limit,
+      };
+    });
+    return data;
   }
 
+  // service that gets country using the 3 abbreviation letters
   async getCountryByCCA3(id: string) {
     const data = await axios({
       url: `https://restcountries.com/v3.1/alpha/${id}`,
@@ -198,11 +204,19 @@ export class CountryService {
     };
   }
 
+  // verify header to be correct (security)
+  verifyHeader(header: { project: string }) {
+    if (header.project !== 'abc') {
+      throw new UnauthorizedException('Request header is invalid');
+    }
+  }
+
   paginateHelper(array: any, pageIndex: number, pageSize: number) {
     var endIndex = Math.min((pageIndex + 1) * pageSize, array.length);
     return array.slice(Math.max(endIndex - pageSize, 0), endIndex);
   }
 
+  //Filter helper that generally filters fields matching a particular condition
   filterHelper(
     array: any,
     fieldname: string,
@@ -218,11 +232,13 @@ export class CountryService {
     }
   }
 
+  //Helper that gets all particular fields in an array of objects
   getFieldHelper(array: any, fieldname: string) {
     return array.map((data) => data[fieldname]);
   }
 
-  fieldCalculatorHelper(array: any, fieldname: string) {
+  //Helper that calculates all particular fields in an array of objects
+  fieldCalculatorHelper(array: any, fieldname: string): number {
     let sum = 0;
     array.forEach((data) => {
       sum += data[fieldname];
@@ -245,9 +261,10 @@ export class CountryService {
     );
   }
 
-  getFrequentElement(array: any) {
+  // Helper that gets most frequent field in an array of objects
+  getFrequentElement(array: any): string | number {
     var a = [];
-    array.forEach(function (obj) {
+    array.forEach(function (obj: Object) {
       if (obj) {
         let valuesArr = Object.values(obj);
         valuesArr.flatMap((el) => {
@@ -259,7 +276,7 @@ export class CountryService {
     a.sort((a, b) => a - b);
     let count = 1,
       max = 0,
-      el;
+      el: string | number;
 
     for (let i = 1; i < a.length; ++i) {
       if (a[i] === a[i - 1]) {
