@@ -206,7 +206,7 @@ export class CountryService {
 
   // verify header to be correct (security)
   verifyHeader(header: { project: string }) {
-    if (header.project !== 'abc') {
+    if (header['x-project-header'] !== 'abc') {
       throw new UnauthorizedException('Request header is invalid');
     }
   }
